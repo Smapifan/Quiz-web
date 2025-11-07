@@ -125,8 +125,7 @@ async function updatePlayerList(){
 
 // ------------------ Quiz laden ------------------
 async function loadQuizzes(){
-  const res = await fetch("data/quizzes.json");
-  const quizzes = await res.json();
+  const quizzes = await (await fetch("data/quizzes.json")).json();
   const quizList=document.getElementById("quizList");
   quizList.innerHTML="";
   quizzes.forEach(q=>{
@@ -182,7 +181,13 @@ function startTimer(){
 // ------------------ Antwort absenden ------------------
 async function answer(correct){
   clearInterval(timerInterval);
-  await fetch(API_BASE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"submitAnswer",code:gameCode,username,correct})});
+  const res = await fetch(API_BASE,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({action:"submitAnswer",code:gameCode,username,correct,currentQuestionIndex})
+  });
+  const data = await res.json();
+  console.log(`Punkte für diese Frage: ${data.pointsAwarded || 0}`);
   currentQuestionIndex++;
   setTimeout(showQuestion,500);
 }
