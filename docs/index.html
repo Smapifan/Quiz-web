@@ -3,215 +3,228 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Smapifan Quiz</title>
+<title>Quiz Game</title>
 <style>
-body {font-family: Arial; background:#101820; color:#fff; text-align:center; margin:0; padding:0;}
-.container {margin-top:10vh;}
-button {background:#ff4747; border:none; color:white; padding:12px 25px; margin:8px; border-radius:8px; cursor:pointer; font-size:1.1em; transition:0.2s;}
-button:hover {background:#ff6767;}
-input {display:block; margin:8px auto; padding:10px; border-radius:6px; border:none; width:200px; text-align:center;}
-#options button{display:block; width:60%; margin:6px auto;}
-#timer{margin-top:20px; font-size:1.3em;}
+  body{font-family:sans-serif;background:#f0f0f0;margin:0;padding:0}
+  .container{max-width:800px;margin:20px auto;background:#fff;padding:20px;border-radius:10px;box-shadow:0 0 10px rgba(0,0,0,0.1);}
+  h1,h2,h3{margin:10px 0;text-align:center}
+  button{padding:10px 20px;margin:5px;cursor:pointer;border:none;border-radius:5px}
+  input{padding:10px;margin:5px;width:calc(100% - 22px)}
+  .player-list{margin:10px 0}
+  .question{margin:20px 0;text-align:center;font-size:1.2em}
+  .options{display:flex;flex-wrap:wrap;justify-content:center}
+  .option{padding:10px 20px;margin:5px;background:#ddd;border-radius:5px;cursor:pointer}
+  .timer{font-size:1.5em;text-align:center;margin:10px 0}
+  .hidden{display:none}
+  .podest{display:flex;justify-content:center;margin:20px 0}
+  .podest div{padding:10px 20px;margin:5px;background:#ffd700;border-radius:5px;text-align:center;}
 </style>
 </head>
 <body>
-<div class="container" id="mainMenu">
-  <h1>🎮 Smapifan Quiz</h1>
-  <button id="createGameBtn">Spiel erstellen</button>
-  <button id="joinGameBtn">Spiel beitreten</button>
-</div>
+<div class="container">
+  <h1>Quiz Game</h1>
 
-<div class="container" id="joinMenu" style="display:none;">
-  <h2>Spiel beitreten</h2>
-  <input id="joinCode" placeholder="Spielcode">
-  <input id="username" placeholder="Spielername">
-  <button id="joinConfirm">Beitreten</button>
-  <button onclick="goBack()">Zurück</button>
-</div>
+  <div id="start-screen">
+    <button id="create-btn">Create Game</button>
+    <button id="join-btn">Join Game</button>
+  </div>
 
-<div class="container" id="quizSelect" style="display:none;">
-  <h2>Wähle ein Quiz</h2>
-  <div id="quizList"></div>
-  <button onclick="goBack()">Zurück</button>
-</div>
+  <div id="create-game" class="hidden">
+    <h2>Quiz erstellen</h2>
+    <select id="quiz-select"></select>
+    <button id="create-game-btn">Spiel erstellen</button>
+    <p id="game-code-display"></p>
+    <h3>Gejoint Spieler:</h3>
+    <div id="player-list" class="player-list"></div>
+    <button id="start-quiz-btn">Quiz starten</button>
+  </div>
 
-<div class="container" id="gameArea" style="display:none;">
-  <h2 id="questionText"></h2>
-  <div id="options"></div>
-  <div id="timer">⏳ 30s</div>
-</div>
+  <div id="join-game" class="hidden">
+    <h2>Spiel beitreten</h2>
+    <input type="text" id="join-code" placeholder="Spielcode">
+    <input type="text" id="join-username" placeholder="Dein Name">
+    <button id="join-game-btn">Beitreten</button>
+    <h3>Gejoint Spieler:</h3>
+    <div id="join-player-list" class="player-list"></div>
+  </div>
 
-<div class="container" id="resultsArea" style="display:none;">
-  <h2>🏆 Ergebnis</h2>
-  <div id="podium"></div>
+  <div id="quiz-screen" class="hidden">
+    <div class="timer" id="timer">30</div>
+    <div class="question" id="question-text"></div>
+    <div class="options" id="options-container"></div>
+  </div>
+
+  <div id="result-screen" class="hidden">
+    <h2>Endergebnis</h2>
+    <div id="podest" class="podest"></div>
+  </div>
+
 </div>
 
 <script>
-const API_BASE = "/api/api.js";
-let currentQuiz=null, questions=[], currentQuestionIndex=0, timerInterval;
-let gameCode=null, username=null, isHost=false, joinedPlayers=[];
+let quizzes = [];
+let questions = {};
+let gameCode = '';
+let currentQuiz = '';
+let currentQuestionIndex = 0;
+let timerInterval;
+let timeLeft = 30;
+let isHost = false;
+let username = '';
+let players = [];
 
-// ------------------ Create Game ------------------
-document.getElementById("createGameBtn").onclick = async () => {
-  const quizId = prompt("Welches Quiz starten? z.B. math_basic");
-  const customCode = prompt("Benutzerdefinierter Spielcode:");
-  if(!quizId||!customCode) return alert("Bitte Quiz und Code eingeben");
-  const res = await fetch(API_BASE,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({action:"createGame", quizId, code:customCode})
-  });
-  const data = await res.json();
-  if(!data.success) return alert("Code bereits vorhanden!");
-  gameCode = customCode;
-  isHost = true;
-  showJoiningScreen();
-};
+async function loadData(){
+  quizzes = await fetch('data/quizzes.json').then(r=>r.json());
+  questions = await fetch('data/questions.json').then(r=>r.json());
 
-// ------------------ Join Game ------------------
-document.getElementById("joinGameBtn").onclick = ()=>{
-  document.getElementById("mainMenu").style.display="none";
-  document.getElementById("joinMenu").style.display="block";
-};
-document.getElementById("joinConfirm").onclick = async ()=>{
-  gameCode = document.getElementById("joinCode").value.trim();
-  username = document.getElementById("username").value.trim();
-  if(!gameCode||!username) return alert("Bitte Code + Name");
-  const res = await fetch(API_BASE,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({action:"joinGame", code:gameCode, username})
-  });
-  const data = await res.json();
-  if(!data.success) return alert("Ungültiger Code");
-  isHost = false;
-  showJoiningScreen();
-};
-
-// ------------------ Joining Screen ------------------
-function showJoiningScreen(){
-  document.querySelectorAll(".container").forEach(c=>c.style.display="none");
-  let joinScreen=document.getElementById("joiningScreen");
-  if(!joinScreen){
-    joinScreen=document.createElement("div");
-    joinScreen.className="container";
-    joinScreen.id="joiningScreen";
-    joinScreen.innerHTML=`<h2>Spielcode: ${gameCode}</h2>
-      <div id="playerList"></div>
-      ${isHost?'<button id="startQuizBtn">Quiz starten</button>':''}
-      <button onclick="goBack()">Zurück</button>`;
-    document.body.appendChild(joinScreen);
-  }
-  joinScreen.style.display="block";
-  updatePlayerList();
-  if(isHost){
-    document.getElementById("startQuizBtn").onclick = async ()=>{
-      await fetch(API_BASE,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"startGame",code:gameCode})});
-      loadQuizzes();
-    };
-  }
-  if(!isHost){setInterval(updatePlayerList,2000);}
-}
-
-// ------------------ Update Players ------------------
-async function updatePlayerList(){
-  const res = await fetch(`${API_BASE}?action=getPlayers&code=${gameCode}`);
-  const data = await res.json();
-  joinedPlayers = data.players||[];
-  const listDiv=document.getElementById("playerList");
-  listDiv.innerHTML="";
-  joinedPlayers.forEach(p=>{const el=document.createElement("div");el.textContent=p.username;listDiv.appendChild(el);});
-}
-
-// ------------------ Quiz laden ------------------
-async function loadQuizzes(){
-  const quizzes = await (await fetch("data/quizzes.json")).json();
-  const quizList=document.getElementById("quizList");
-  quizList.innerHTML="";
+  const quizSelect = document.getElementById('quiz-select');
   quizzes.forEach(q=>{
-    const btn=document.createElement("button");
-    btn.textContent=q.title;
-    btn.style.background=q.color;
-    btn.onclick=()=>startGame(q.id);
-    quizList.appendChild(btn);
+    const opt = document.createElement('option');
+    opt.value=q.id;
+    opt.textContent=q.title;
+    quizSelect.appendChild(opt);
   });
-  document.getElementById("quizSelect").style.display="block";
 }
 
-// ------------------ Quiz starten ------------------
-async function startGame(quizId){
-  const allQuestions = await (await fetch("data/questions.json")).json();
-  const quiz = (await (await fetch("data/quizzes.json")).json()).find(q=>q.id===quizId);
-  questions = allQuestions[quiz.questions_key];
-  currentQuiz=quiz;
-  currentQuestionIndex=0;
-  document.getElementById("quizSelect").style.display="none";
-  document.getElementById("gameArea").style.display="block";
-  showQuestion();
+// -------- Utility: API Call --------
+async function api(action,data={}){
+  const params = {...data, action};
+  const res = await fetch('api/api.js', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(params)
+  });
+  return res.json();
 }
 
-// ------------------ Frage anzeigen ------------------
-function showQuestion(){
-  const q = questions[currentQuestionIndex];
-  if(!q) return showResults();
-  document.getElementById("questionText").textContent=q.question;
-  const options=document.getElementById("options");
-  options.innerHTML="";
+// -------- Create Game --------
+document.getElementById('create-btn').onclick = ()=>{
+  document.getElementById('start-screen').classList.add('hidden');
+  document.getElementById('create-game').classList.remove('hidden');
+  isHost = true;
+}
+
+// -------- Join Game --------
+document.getElementById('join-btn').onclick = ()=>{
+  document.getElementById('start-screen').classList.add('hidden');
+  document.getElementById('join-game').classList.remove('hidden');
+  isHost = false;
+}
+
+// -------- Create Game Button --------
+document.getElementById('create-game-btn').onclick = async ()=>{
+  const quizId = document.getElementById('quiz-select').value;
+  currentQuiz = quizId;
+  gameCode = Math.floor(Math.random()*90000+10000).toString();
+  const res = await api('createGame',{quizId, code:gameCode});
+  if(res.success){
+    document.getElementById('game-code-display').textContent = 'Spielcode: '+gameCode;
+    updatePlayers();
+    setInterval(updatePlayers,2000);
+  }else{
+    alert(res.error);
+  }
+}
+
+// -------- Join Game Button --------
+document.getElementById('join-game-btn').onclick = async ()=>{
+  gameCode = document.getElementById('join-code').value.trim();
+  username = document.getElementById('join-username').value.trim();
+  if(!gameCode || !username) return alert('Code und Name eingeben');
+  const res = await api('joinGame',{code:gameCode, username});
+  if(res.success){
+    document.getElementById('join-game').classList.add('hidden');
+    document.getElementById('quiz-screen').classList.remove('hidden');
+    loadQuestion();
+    setInterval(loadQuestion,1000);
+  }else{
+    alert(res.error);
+  }
+}
+
+// -------- Update Players List (Host) --------
+async function updatePlayers(){
+  if(!isHost) return;
+  const res = await api('getPlayers',{code:gameCode});
+  players = res.players;
+  const list = document.getElementById('player-list');
+  list.innerHTML='';
+  players.forEach(p=>{
+    const div = document.createElement('div');
+    div.textContent = p.username;
+    list.appendChild(div);
+  });
+}
+
+// -------- Start Quiz (Host) --------
+document.getElementById('start-quiz-btn').onclick = async ()=>{
+  await api('startGame',{code:gameCode});
+  document.getElementById('create-game').classList.add('hidden');
+  document.getElementById('quiz-screen').classList.remove('hidden');
+  loadQuestion();
+}
+
+// -------- Load Question --------
+async function loadQuestion(){
+  const quizQuestions = questions[currentQuiz];
+  if(currentQuestionIndex >= quizQuestions.length){
+    showResults();
+    return;
+  }
+  const q = quizQuestions[currentQuestionIndex];
+  document.getElementById('question-text').textContent = q.question;
+  const optionsDiv = document.getElementById('options-container');
+  optionsDiv.innerHTML='';
   q.options.forEach(opt=>{
-    const btn=document.createElement("button");
-    btn.textContent=opt;
-    btn.onclick=()=>answer(opt===q.correct);
-    options.appendChild(btn);
+    const btn = document.createElement('div');
+    btn.classList.add('option');
+    btn.textContent = opt;
+    btn.onclick = ()=>submitAnswer(opt===q.correct);
+    optionsDiv.appendChild(btn);
   });
   startTimer();
 }
 
-// ------------------ Timer ------------------
+// -------- Timer --------
 function startTimer(){
-  let time=currentQuiz.time_per_question;
-  document.getElementById("timer").textContent=`⏳ ${time}s`;
   clearInterval(timerInterval);
-  timerInterval=setInterval(()=>{
-    time--;
-    document.getElementById("timer").textContent=`⏳ ${time}s`;
-    if(time<=0){clearInterval(timerInterval); answer(false);}
+  timeLeft = 30;
+  document.getElementById('timer').textContent = timeLeft;
+  timerInterval = setInterval(()=>{
+    timeLeft--;
+    document.getElementById('timer').textContent = timeLeft;
+    if(timeLeft<=0){
+      clearInterval(timerInterval);
+      currentQuestionIndex++;
+      loadQuestion();
+    }
   },1000);
 }
 
-// ------------------ Antwort absenden ------------------
-async function answer(correct){
+// -------- Submit Answer --------
+async function submitAnswer(correct){
+  if(!username) return;
+  await api('submitAnswer',{code:gameCode, username, correct, currentQuestionIndex});
   clearInterval(timerInterval);
-  const res = await fetch(API_BASE,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({action:"submitAnswer",code:gameCode,username,correct,currentQuestionIndex})
-  });
-  const data = await res.json();
-  console.log(`Punkte für diese Frage: ${data.pointsAwarded || 0}`);
   currentQuestionIndex++;
-  setTimeout(showQuestion,500);
+  loadQuestion();
 }
 
-// ------------------ Ergebnisse ------------------
+// -------- Show Results --------
 async function showResults(){
-  document.getElementById("gameArea").style.display="none";
-  document.getElementById("resultsArea").style.display="block";
-  const res = await fetch(`${API_BASE}?action=getResults&code=${gameCode}`);
-  const data = await res.json();
-  const podium = document.getElementById("podium");
-  podium.innerHTML="";
-  data.results.slice(0,5).forEach((p,i)=>{
-    const el=document.createElement("div");
-    el.textContent=`${i+1}. ${p.username} - ${p.points} Punkte`;
-    podium.appendChild(el);
+  document.getElementById('quiz-screen').classList.add('hidden');
+  const res = await api('getResults',{code:gameCode});
+  const podest = document.getElementById('podest');
+  podest.innerHTML='';
+  res.results.slice(0,3).forEach((p,i)=>{
+    const div = document.createElement('div');
+    div.textContent = `${i+1}. ${p.username}: ${p.points} Punkte`;
+    podest.appendChild(div);
   });
+  document.getElementById('result-screen').classList.remove('hidden');
 }
 
-// ------------------ Zurück ------------------
-function goBack(){
-  document.querySelectorAll(".container").forEach(c=>c.style.display="none");
-  document.getElementById("mainMenu").style.display="block";
-}
+loadData();
 </script>
 </body>
 </html>
