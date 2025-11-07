@@ -1,20 +1,16 @@
 [
   {
     "id": "math_basic",
-    "title": "🧮 Mathe Basics",
-    "description": "Teste Addieren, Subtrahieren und Multiplizieren",
-    "questions_key": "math_basic_questions",
-    "time_per_question": 30,
-    "max_points": 1000,
-    "color": "#ff4747"
+    "title": "Mathe Grundlagen",
+    "color": "#ff4747",
+    "questions_key": "math_basic",
+    "time_per_question": 30
   },
   {
-    "id": "geography_world",
-    "title": "🌍 Welt Geografie",
-    "description": "Teste Länder, Hauptstädte und Kontinente",
-    "questions_key": "geography_world_questions",
-    "time_per_question": 30,
-    "max_points": 1000,
-    "color": "#47aaff"
+    "id": "geo_easy",
+    "title": "Erdkunde leicht",
+    "color": "#47ff47",
+    "questions_key": "geo_easy",
+    "time_per_question": 30
   }
 ]
