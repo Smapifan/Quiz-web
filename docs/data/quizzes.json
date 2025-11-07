@@ -1,8 +1,8 @@
 [
   {
     "id": "math_basic",
-    "title": "🧮 Mathe Grundlagen",
-    "description": "Teste dein Wissen in den Grundrechenarten!",
+    "title": "🧮 Mathe Basics",
+    "description": "Teste Addieren, Subtrahieren und Multiplizieren",
     "questions_key": "math_basic_questions",
     "time_per_question": 30,
     "max_points": 1000,
@@ -10,8 +10,8 @@
   },
   {
     "id": "geography_world",
-    "title": "🌍 Welt Geographie",
-    "description": "Wie gut kennst du Länder, Städte und Kontinente?",
+    "title": "🌍 Welt Geografie",
+    "description": "Teste Länder, Hauptstädte und Kontinente",
     "questions_key": "geography_world_questions",
     "time_per_question": 30,
     "max_points": 1000,
