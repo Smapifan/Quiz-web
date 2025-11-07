@@ -1,11 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = 'https://ckaerwewxtfawyvgztpn.supabase.co';
-const supabaseKey = 'DEIN_ANON_KEY_HIER'; // Ersetze mit deinem Key
+const supabaseKey = 'DEIN_ANON_KEY_HIER';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 export default async function handler(req,res){
-  const { action, quizId, code, username, correct } = req.method==='POST'?req.body:req.query;
+  const { action, quizId, code, username, correct, currentQuestionIndex } = req.method==='POST'?req.body:req.query;
 
   if(action==='createGame'){
     const { data: existing } = await supabase.from('games').select().eq('code',code).single();
@@ -28,13 +28,36 @@ export default async function handler(req,res){
 
   if(action==='submitAnswer'){
     if(!username) return res.status(400).json({success:false});
+
+    const { data: totalPlayers } = await supabase.from('players').select('username').eq('game_code',code);
+    const { data: answered } = await supabase.from('players').select('username').eq('game_code',code).not(`answered_q${currentQuestionIndex}`, 'is', true);
+    const alreadyAnsweredCount = totalPlayers.length - answered.length;
+
+    let pointsToAdd = 0;
     if(correct){
-      const { data: player } = await supabase.from('players').select().eq('game_code',code).eq('username',username).single();
-      await supabase.from('players').update({ points:player.points+1000 }).eq('game_code',code).eq('username',username);
+      pointsToAdd = Math.floor(1000 * (totalPlayers.length - alreadyAnsweredCount)/totalPlayers.length);
     }
-    return res.status(200).json({success:true});
+
+    const updateObj = { points: supabase.raw('points + ?', [pointsToAdd]) };
+    updateObj[`answered_q${currentQuestionIndex}`] = true;
+
+    await supabase.from('players').update(updateObj).eq('game_code',code).eq('username',username);
+
+    return res.status(200).json({success:true, pointsAwarded: pointsToAdd});
   }
 
+  if(action==='getPlayers'){
+    const { data: players } = await supabase.from('players').select('username').eq('game_code',code);
+    return res.status(200).json({success:true, players});
+  }
+
+  if(action==='getResults'){
+    const { data: results } = await supabase.from('players').select('username, points').eq('game_code',code).order('points',{ascending:false});
+    return res.status(200).json({results});
+  }
+
+  res.status(400).json({success:false,error:"Unbekannte Aktion"});
+}
   if(action==='getPlayers'){
     const { data: players } = await supabase.from('players').select('username').eq('game_code',code);
     return res.status(200).json({success:true, players});
