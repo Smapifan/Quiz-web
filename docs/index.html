@@ -1,17 +1,43 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Smapifan Quiz</title>
-  <link rel="stylesheet" href="style.css" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smapifan Quiz</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Smapifan Quiz</h1>
-  <div id="quiz-select"></div>
-  <div id="game"></div>
-  <div id="result"></div>
+<div class="container" id="mainMenu">
+  <h1>🎮 Smapifan Quiz</h1>
+  <button id="createGameBtn">Spiel erstellen</button>
+  <button id="joinGameBtn">Spiel beitreten</button>
+</div>
 
-  <script src="script.js"></script>
+<div class="container" id="joinMenu" style="display:none;">
+  <h2>Spiel beitreten</h2>
+  <input id="joinCode" placeholder="Spielcode">
+  <input id="username" placeholder="Spielername">
+  <button id="joinConfirm">Beitreten</button>
+  <button onclick="goBack()">Zurück</button>
+</div>
+
+<div class="container" id="quizSelect" style="display:none;">
+  <h2>Wähle ein Quiz</h2>
+  <div id="quizList"></div>
+  <button onclick="goBack()">Zurück</button>
+</div>
+
+<div class="container" id="gameArea" style="display:none;">
+  <h2 id="questionText"></h2>
+  <div id="options"></div>
+  <div id="timer">⏳ 30s</div>
+</div>
+
+<div class="container" id="resultsArea" style="display:none;">
+  <h2>🏆 Ergebnis</h2>
+  <div id="podium"></div>
+</div>
+
+<script src="script.js"></script>
 </body>
 </html>
