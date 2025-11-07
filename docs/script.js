@@ -1,97 +1,120 @@
-const API_BASE = "https://DEIN-VERCEL-NAME.vercel.app/api";
-let currentQuiz = null, currentQuestion = 0, score = 0, gameId = null, playerName = null;
-let timer, timeLeft = 30;
+const API_BASE = "/api/api.js"; // Vercel Route
+let currentQuiz = null, questions = [], currentQuestionIndex = 0, timerInterval;
+let gameCode = null, username = null;
 
-async function loadQuizzes() {
-  const quizzes = await fetch("data/quizzes.json").then(r => r.json());
-  const container = document.getElementById("quiz-select");
-  container.innerHTML = "<h2>Wähle ein Quiz:</h2>";
-
-  quizzes.forEach(q => {
-    const card = document.createElement("div");
-    card.style.background = q.color;
-    card.style.padding = "10px";
-    card.style.margin = "10px";
-    card.style.borderRadius = "8px";
-    card.innerHTML = `<h3>${q.title}</h3><p>${q.description}</p>`;
-    const btn = document.createElement("button");
-    btn.textContent = "Starten";
-    btn.onclick = () => startQuiz(q);
-    card.appendChild(btn);
-    container.appendChild(card);
-  });
-}
-
-async function startQuiz(quiz) {
-  playerName = prompt("Dein Spielername:");
-  const res = await fetch(`${API_BASE}/createGame`, {
+document.getElementById("createGameBtn").onclick = async () => {
+  const quizId = prompt("Welches Quiz starten? z.B. math_basic");
+  const customCode = prompt("Benutzerdefinierter Spielcode:");
+  if (!quizId || !customCode) return alert("Bitte Quiz und Code eingeben");
+  const res = await fetch(API_BASE, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ quizId: quiz.id })
+    body: JSON.stringify({ action:"createGame", quizId, code: customCode })
   });
   const data = await res.json();
-  gameId = data.gameId;
+  if (!data.success) return alert("Code bereits vorhanden!");
+  gameCode = customCode;
+  loadQuizzes();
+};
+
+document.getElementById("joinGameBtn").onclick = () => {
+  document.getElementById("mainMenu").style.display = "none";
+  document.getElementById("joinMenu").style.display = "block";
+};
+
+document.getElementById("joinConfirm").onclick = async () => {
+  gameCode = document.getElementById("joinCode").value.trim();
+  username = document.getElementById("username").value.trim();
+  if (!gameCode || !username) return alert("Bitte Code + Name");
+  const res = await fetch(API_BASE, {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ action:"joinGame", code:gameCode, username })
+  });
+  const data = await res.json();
+  if (!data.success) return alert("Ungültiger Code");
+  startQuiz();
+};
+
+function goBack() {
+  document.querySelectorAll(".container").forEach(c => c.style.display="none");
+  document.getElementById("mainMenu").style.display="block";
+}
+
+async function loadQuizzes() {
+  const res = await fetch("data/quizzes.json");
+  const quizzes = await res.json();
+  const quizList = document.getElementById("quizList");
+  quizList.innerHTML = "";
+  quizzes.forEach(q=>{
+    const btn = document.createElement("button");
+    btn.textContent = q.title;
+    btn.style.background = q.color;
+    btn.onclick = ()=>startGame(q.id);
+    quizList.appendChild(btn);
+  });
+  document.getElementById("quizSelect").style.display="block";
+}
+
+async function startGame(quizId) {
+  const res = await fetch("data/questions.json");
+  const allQuestions = await res.json();
+  const quiz = (await (await fetch("data/quizzes.json")).json()).find(q=>q.id===quizId);
+  questions = allQuestions[quiz.questions_key];
   currentQuiz = quiz;
-  document.getElementById("quiz-select").style.display = "none";
+  currentQuestionIndex=0;
+  document.getElementById("quizSelect").style.display="none";
+  document.getElementById("gameArea").style.display="block";
   showQuestion();
 }
 
-async function showQuestion() {
-  const questions = await fetch("data/questions.json").then(r => r.json());
-  const list = questions[currentQuiz.questions_key];
-  if (currentQuestion >= list.length) return showResults();
-
-  const q = list[currentQuestion];
-  const div = document.getElementById("game");
-  div.innerHTML = `<h2>${q.question}</h2><div id='timer'>30</div>`;
-
-  q.options.forEach(opt => {
+function showQuestion() {
+  const q = questions[currentQuestionIndex];
+  if(!q) return showResults();
+  document.getElementById("questionText").textContent = q.question;
+  const options = document.getElementById("options");
+  options.innerHTML = "";
+  q.options.forEach(opt=>{
     const btn = document.createElement("button");
     btn.textContent = opt;
-    btn.onclick = () => answer(opt === q.correct);
-    div.appendChild(btn);
+    btn.onclick = ()=>answer(opt===q.correct);
+    options.appendChild(btn);
   });
-
-  timeLeft = 30;
-  clearInterval(timer);
-  timer = setInterval(() => {
-    timeLeft--;
-    document.getElementById("timer").textContent = timeLeft;
-    if (timeLeft <= 0) {
-      clearInterval(timer);
-      answer(false);
-    }
-  }, 1000);
+  startTimer();
 }
 
-async function answer(correct) {
-  clearInterval(timer);
-  const res = await fetch(`${API_BASE}/submitAnswer`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ gameId, playerName, correct, timeLeft, totalPlayers: 10 })
+function startTimer() {
+  let time = currentQuiz.time_per_question;
+  document.getElementById("timer").textContent=`⏳ ${time}s`;
+  clearInterval(timerInterval);
+  timerInterval=setInterval(()=>{
+    time--;
+    document.getElementById("timer").textContent=`⏳ ${time}s`;
+    if(time<=0){ clearInterval(timerInterval); answer(false); }
+  },1000);
+}
+
+async function answer(correct){
+  clearInterval(timerInterval);
+  await fetch(API_BASE,{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({action:"submitAnswer", code:gameCode, username, correct})
   });
+  currentQuestionIndex++;
+  setTimeout(showQuestion,1000);
+}
+
+async function showResults(){
+  document.getElementById("gameArea").style.display="none";
+  document.getElementById("resultsArea").style.display="block";
+  const res = await fetch(`${API_BASE}?action=getResults&code=${gameCode}`);
   const data = await res.json();
-  score += data.points;
-  currentQuestion++;
-  alert(`Du hast jetzt ${score} Punkte`);
-  setTimeout(showQuestion, 1000);
-}
-
-async function showResults() {
-  const res = await fetch(`${API_BASE}/getResults?gameId=${gameId}`);
-  const data = await res.json();
-  const div = document.getElementById("result");
-  div.innerHTML = "<h2>Endergebnis</h2>";
-
-  data.results.forEach((r, i) => {
-    const p = document.createElement("div");
-    p.textContent = `${i + 1}. ${r.name} — ${r.score} Punkte`;
-    if (i === 0) p.style.color = "#FFD700";
-    if (i === 1) p.style.color = "#C0C0C0";
-    if (i === 2) p.style.color = "#CD7F32";
-    div.appendChild(p);
+  const podium = document.getElementById("podium");
+  podium.innerHTML="";
+  data.results.slice(0,5).forEach((p,i)=>{
+    const el=document.createElement("div");
+    el.textContent=`${i+1}. ${p.name} - ${p.points} Punkte`;
+    podium.appendChild(el);
   });
 }
-
-loadQuizzes();
