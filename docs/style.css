@@ -1,0 +1,36 @@
+body {
+  font-family: "Segoe UI", sans-serif;
+  background: #111;
+  color: #fff;
+  text-align: center;
+  margin: 0;
+  padding: 0;
+}
+
+h1 {
+  background: linear-gradient(90deg, red, #ffb300);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-size: 2.5rem;
+  margin-top: 20px;
+}
+
+button {
+  background: #ff4747;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 25px;
+  color: #fff;
+  font-weight: bold;
+  margin: 10px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+button:hover {
+  background: #ff6f6f;
+}
+
+#result div {
+  margin: 8px 0;
+}
