@@ -1,0 +1,48 @@
+{
+  "math_basic_questions": [
+    {
+      "id": 1,
+      "question": "Was ist 2 + 2?",
+      "options": ["3", "4", "5", "6"],
+      "correct": "4",
+      "explanation": "2 + 2 ergibt 4, das ist die einfachste Additionsregel."
+    },
+    {
+      "id": 2,
+      "question": "Was ist 5 × 3?",
+      "options": ["10", "12", "15", "20"],
+      "correct": "15",
+      "explanation": "5 mal 3 ergibt 15, weil 5 + 5 + 5 = 15."
+    },
+    {
+      "id": 3,
+      "question": "Was ist 10 − 7?",
+      "options": ["1", "2", "3", "4"],
+      "correct": "3",
+      "explanation": "10 minus 7 ergibt 3."
+    }
+  ],
+  "geography_world_questions": [
+    {
+      "id": 1,
+      "question": "Welches Land hat die größte Fläche der Erde?",
+      "options": ["China", "USA", "Kanada", "Russland"],
+      "correct": "Russland",
+      "explanation": "Russland ist das größte Land der Welt, über 17 Millionen km²."
+    },
+    {
+      "id": 2,
+      "question": "Welche Stadt ist die Hauptstadt von Australien?",
+      "options": ["Sydney", "Canberra", "Melbourne", "Perth"],
+      "correct": "Canberra",
+      "explanation": "Viele denken Sydney, aber Canberra ist die richtige Hauptstadt."
+    },
+    {
+      "id": 3,
+      "question": "Auf welchem Kontinent liegt Ägypten?",
+      "options": ["Asien", "Europa", "Afrika", "Südamerika"],
+      "correct": "Afrika",
+      "explanation": "Ägypten liegt in Nordafrika, teils am Mittelmeer."
+    }
+  ]
+}
